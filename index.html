@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#191b1a">
+<title>NOSTALGIA</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+/* ============================================================
+   Palette aus der Figur selbst: Mantel-Türkis, Hut-Magenta,
+   dazu das Bernstein einer alten Anzeigeröhre auf warmem Grau.
+   ============================================================ */
+:root{
+  --void:#191b1a;
+  --panel:#222523;
+  --panel2:#2b2f2c;
+  --line:#3a3f3b;
+  --ink:#ded8c9;
+  --dim:#8b877b;
+  --amber:#e3a34d;
+  --cone:#cf1f72;
+  --robe:#2fa6b6;
+  --ok:#7fb069;
+  --bad:#b5533f;
+  --pad:16px;
+  --r:3px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","Roboto Mono",Menlo,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--void);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.45;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overscroll-behavior-y:contain;
+}
+.wrap{max-width:540px;margin:0 auto;padding:var(--pad) var(--pad) 48px}
+
+/* --- Typografie --- */
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--dim);margin:0 0 6px
+}
+h1{
+  font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 2px;line-height:1
+}
+h2{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0 0 10px}
+.sub{color:var(--dim);font-size:14px;margin:0 0 22px}
+.mono{font-family:var(--mono)}
+
+/* --- Kopfleiste --- */
+.top{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:20px
+}
+.top .code{font-family:var(--mono);font-size:13px;letter-spacing:.18em;color:var(--amber)}
+.badge{
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:var(--r);padding:3px 7px;color:var(--dim)
+}
+.badge.master{border-color:var(--cone);color:var(--cone)}
+.badge.player{border-color:var(--robe);color:var(--robe)}
+
+/* --- Formulare --- */
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);margin:0 0 6px}
+input,select,textarea{
+  width:100%;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r);
+  padding:13px 12px;font-size:16px;font-family:var(--sans);
+  appearance:none;-webkit-appearance:none
+}
+input:focus,select,textarea:focus,button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+textarea{font-family:var(--sans);line-height:1.4;resize:vertical;min-height:88px}
+.field{margin-bottom:16px}
+
+button{
+  width:100%;font-family:var(--mono);font-size:13px;letter-spacing:.14em;
+  text-transform:uppercase;font-weight:600;
+  padding:15px 14px;border-radius:var(--r);cursor:pointer;
+  background:var(--panel2);color:var(--ink);border:1px solid var(--line)
+}
+button:active{transform:translateY(1px)}
+button[disabled]{opacity:.38;cursor:not-allowed}
+button.primary{background:var(--amber);color:#1a1614;border-color:var(--amber)}
+button.cone{background:var(--cone);color:#fff;border-color:var(--cone)}
+button.ghost{background:transparent}
+button.slim{padding:11px 12px;font-size:12px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.stack>*+*{margin-top:10px}
+
+/* --- Kartenraster --- */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.card{
+  position:relative;border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;background:var(--panel);cursor:pointer;padding:0;display:block
+}
+.card img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+.card .tag{
+  position:absolute;left:0;bottom:0;right:0;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  background:rgba(15,16,15,.82);padding:5px 7px;color:var(--dim);text-align:left
+}
+.card.sel{border-color:var(--cone);box-shadow:inset 0 0 0 2px var(--cone)}
+.card.sel .tag{color:var(--cone)}
+.card.target{border-color:var(--amber);box-shadow:inset 0 0 0 2px var(--amber)}
+.card.target .tag{color:var(--amber)}
+.card.out{opacity:.3}
+.card.out::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent 0 8px,rgba(181,83,63,.35) 8px 9px)
+}
+.card.locked{cursor:default}
+
+/* --- Signatur: die geschwärzte Übertragung --- */
+.transmission{
+  border:1px solid var(--line);border-left:3px solid var(--amber);
+  border-radius:var(--r);background:var(--panel);padding:14px;margin:16px 0
+}
+.transmission .eyebrow{margin-bottom:9px}
+.redact{
+  font-family:var(--mono);font-size:15px;line-height:1.9;
+  color:var(--amber);word-break:break-word;letter-spacing:.04em
+}
+.redact span{opacity:.55}
+.transmission.live .redact span{animation:blockpulse 1.1s ease-in-out infinite}
+.transmission.live .redact span:nth-child(3n+1){animation-delay:.12s}
+.transmission.live .redact span:nth-child(3n+2){animation-delay:.26s}
+@keyframes blockpulse{0%,100%{opacity:.5}50%{opacity:1}}
+.empty{color:var(--dim);font-size:14px;font-style:italic}
+
+/* --- Listen --- */
+.list{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.list .item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 12px;background:var(--panel);border-bottom:1px solid var(--line)
+}
+.list .item:last-child{border-bottom:none}
+.item .nm{font-weight:600;font-size:15px}
+.item .meta{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--dim)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none;margin-right:9px}
+.dot.on{background:var(--ok)}
+.dot.wait{background:var(--amber)}
+.pts{font-family:var(--mono);font-size:15px;color:var(--amber);font-variant-numeric:tabular-nums}
+
+/* --- Diverses --- */
+.note{
+  font-size:13px;color:var(--dim);border-left:2px solid var(--line);
+  padding-left:11px;margin:16px 0
+}
+.status{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin:14px 0 0;text-align:center
+}
+.status.err{color:var(--bad)}
+.status.ok{color:var(--ok)}
+.sep{height:1px;background:var(--line);margin:24px 0}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:50;
+  background:var(--panel2);border:1px solid var(--amber);color:var(--ink);
+  padding:10px 16px;border-radius:var(--r);font-size:14px;
+  max-width:88vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5)
+}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-top:14px}
+summary{
+  padding:12px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);cursor:pointer
+}
+details .body{padding:0 12px 14px}
+screen{display:none}
+.scr{display:none}
+.scr.on{display:block}
+.big{font-size:42px;font-family:var(--mono);letter-spacing:.2em;color:var(--amber);
+  text-align:center;margin:8px 0 4px}
+.center{text-align:center}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>NOSTALGIA</h1>
+      <div class="code" id="topCode">&nbsp;</div>
+    </div>
+    <div class="badge" id="topRole">offline</div>
+  </div>
+
+  <!-- ============ ANMELDEN ============ -->
+  <section class="scr on" id="scrLogin">
+    <p class="eyebrow">Anmelden</p>
+    <p class="sub">Ein Gerät leitet das Spiel. Alle anderen raten.</p>
+
+    <div class="field">
+      <label for="inCode">Raumcode</label>
+      <input id="inCode" maxlength="6" autocomplete="off" autocapitalize="characters"
+             spellcheck="false" placeholder="z. B. MAGOR">
+    </div>
+    <div class="field">
+      <label for="inName">Dein Name</label>
+      <input id="inName" maxlength="14" autocomplete="off" placeholder="Wie du in der Tabelle stehst">
+    </div>
+
+    <div class="stack">
+      <button class="primary" id="btnJoin">Als Spieler beitreten</button>
+      <button class="cone" id="btnHost">Raum als Spielleiter öffnen</button>
+    </div>
+    <p class="status" id="loginStatus">&nbsp;</p>
+  </section>
+
+  <!-- ============ SPIELLEITER: LOBBY ============ -->
+  <section class="scr" id="scrLobby">
+    <p class="eyebrow">Raum offen</p>
+    <div class="big" id="lobbyCode">----</div>
+    <p class="sub center">Diesen Code an die anderen weitergeben.</p>
+
+    <p class="eyebrow">Am Tisch</p>
+    <div class="list" id="lobbyList"></div>
+
+    <div class="sep"></div>
+
+    <p class="eyebrow">Kartenserie für diese Runde</p>
+    <div class="row" style="margin-bottom:6px">
+      <button class="slim" data-set="1">Serie 1</button>
+      <button class="slim" data-set="2">Serie 2</button>
+      <button class="slim" data-set="3">Serie 3</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0">Dann die gesuchte Karte antippen.</p>
+    <div class="cards" id="lobbyCards"></div>
+
+    <button class="primary" id="btnStart" disabled>Runde starten</button>
+
+    <details>
+      <summary>Magor &amp; Stimme</summary>
+      <div class="body">
+        <div class="field">
+          <label for="inHook">MacroDroid-Webhook</label>
+          <input id="inHook" autocomplete="off" spellcheck="false"
+                 placeholder="https://trigger.macrodroid.com/…/magor">
+        </div>
+        <div class="field">
+          <label for="inVoice">Stimme auf diesem Gerät</label>
+          <select id="inVoice"></select>
+        </div>
+        <div class="row">
+          <div class="field" style="margin:0">
+            <label for="inRate">Tempo</label>
+            <input id="inRate" type="number" step="0.05" min="0.4" max="1.4" value="0.85">
+          </div>
+          <div class="field" style="margin:0">
+            <label for="inPitch">Tonhöhe</label>
+            <input id="inPitch" type="number" step="0.05" min="0" max="2" value="0.6">
+          </div>
+        </div>
+        <button class="ghost slim" id="btnTestVoice" style="margin-top:10px">Stimme testen</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ SPIELLEITER: RUNDE ============ -->
+  <section class="scr" id="scrMaster">
+    <p class="eyebrow">Runde <span id="mRound">1</span> &middot; Stufe <span id="mStage">1</span></p>
+    <h2>Was sagt Magor?</h2>
+
+    <div class="field">
+      <textarea id="inClue" placeholder="Ich erinnere mich an einen dunklen Tag…"></textarea>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div>
+        <label for="inMood">Stimmung</label>
+        <select id="inMood">
+          <option value="sus" selected>misstrauisch</option>
+          <option value="joy">erfreut</option>
+          <option value="anger">zornig</option>
+        </select>
+      </div>
+      <div>
+        <label for="inLvl">Stärke</label>
+        <select id="inLvl">
+          <option value="1">1 – leicht</option>
+          <option value="2" selected>2 – mittel</option>
+          <option value="3">3 – stark</option>
+        </select>
+      </div>
+    </div>
+    <button class="primary" id="btnSpeak">Magor sprechen lassen</button>
+    <button class="ghost slim" id="btnRepeat" style="margin-top:8px" disabled>Nochmal sagen</button>
+
+    <div class="sep"></div>
+
+    <p class="eyebrow">Gesuchte Karte</p>
+    <div class="cards" id="masterCards"></div>
+
+    <p class="eyebrow">Wer hat abgegeben</p>
+    <div class="list" id="masterList"></div>
+
+    <div class="stack" style="margin-top:16px">
+      <button class="cone" id="btnEval">Stufe auswerten</button>
+      <button class="ghost slim" id="btnEndRound">Runde beenden und auflösen</button>
+    </div>
+    <p class="status" id="masterStatus">&nbsp;</p>
+  </section>
+
+  <!-- ============ SPIELER: WARTEN ============ -->
+  <section class="scr" id="scrWait">
+    <p class="eyebrow">Verbunden</p>
+    <h2 id="waitHead">Magor sortiert seine Erinnerungen.</h2>
+    <p class="sub" id="waitSub">Die Runde beginnt, sobald der Spielleiter eine Karte gewählt hat.</p>
+    <p class="eyebrow">Am Tisch</p>
+    <div class="list" id="waitList"></div>
+  </section>
+
+  <!-- ============ SPIELER: RUNDE ============ -->
+  <section class="scr" id="scrPlay">
+    <p class="eyebrow">Runde <span id="pRound">1</span> &middot; Stufe <span id="pStage">1</span></p>
+
+    <div class="transmission" id="trans">
+      <p class="eyebrow">Magor sagt</p>
+      <div class="redact" id="redact"><span class="empty">Noch nichts. Warte auf seine Stimme.</span></div>
+    </div>
+    <button class="ghost slim" id="btnReplay">Magor wiederholen lassen</button>
+
+    <div class="sep"></div>
+
+    <p class="eyebrow" id="pickLabel">Welche Karte meint er?</p>
+    <div class="cards" id="playCards"></div>
+    <button class="primary" id="btnLog" disabled>Karte abgeben</button>
+    <p class="status" id="playStatus">&nbsp;</p>
+
+    <div class="sep"></div>
+    <p class="eyebrow">Punkte</p>
+    <div class="list" id="playScores"></div>
+  </section>
+
+  <!-- ============ AUFLÖSUNG ============ -->
+  <section class="scr" id="scrReveal">
+    <p class="eyebrow">Runde <span id="rRound">1</span> aufgelöst</p>
+    <h2 id="revealHead">Das war die gesuchte Karte.</h2>
+    <div class="cards" id="revealCards" style="grid-template-columns:1fr"></div>
+    <p class="eyebrow">Punkte</p>
+    <div class="list" id="revealScores"></div>
+    <div class="stack" id="revealMasterBtns" style="margin-top:18px">
+      <button class="primary" id="btnNextRound">Nächste Runde vorbereiten</button>
+      <button class="ghost slim" id="btnEndGame">Spiel beenden</button>
+    </div>
+    <p class="status" id="revealStatus">&nbsp;</p>
+  </section>
+
+  <!-- ============ ENDE ============ -->
+  <section class="scr" id="scrOver">
+    <p class="eyebrow">Endstand</p>
+    <h2>Magor schweigt wieder.</h2>
+    <div class="list" id="overScores"></div>
+    <button class="ghost" id="btnAgain" style="margin-top:20px">Seite neu laden</button>
+  </section>
+
+</div>
+
+<script>
+/* ================================================================
+   NOSTALGIA
+   Spielleiter ist der PeerJS-Host und hält den einzigen echten
+   Spielstand. Spieler bekommen nur ihre eigene Sicht geschickt -
+   die Zielkarte und fremde Abgaben verlassen dieses Gerät nie.
+   ================================================================ */
+
+const SETS = {1:[],2:[],3:[]};
+for (const s of [1,2,3]) for (let i=1;i<=5;i++) SETS[s].push('card_'+s+'_'+i);
+
+const $  = id => document.getElementById(id);
+const el = (t,c,x) => { const n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n; };
+
+let ME = { role:null, name:'', code:'' };
+let peer=null, hostConn=null;
+const conns = {};                       // nur Spielleiter: peerId -> DataConnection
+
+/* ---------- Spielstand (nur beim Spielleiter) ---------- */
+let G = null;
+function freshGame(code){
+  return { code, phase:'lobby', round:1, stage:0,
+           setNo:null, target:null, lastClue:'', lastMask:[], speaking:false,
+           players:{} };            // pid -> {name,score,pick,logged,done,solvedStage,wrong:[],online}
+}
+
+/* ---------- Bildschirme ---------- */
+function show(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  $(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+let toastTimer=null;
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=el('div','toast',msg); document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.remove(),3200);
+}
+function setStatus(id,msg,kind){
+  const n=$(id); n.textContent=msg||'\u00a0';
+  n.className='status'+(kind?' '+kind:'');
+}
+
+/* ---------- Einstellungen merken ---------- */
+function store(k,v){ try{ localStorage.setItem('nost_'+k,v); }catch(e){} }
+function recall(k,d){ try{ return localStorage.getItem('nost_'+k) ?? d; }catch(e){ return d; } }
+
+/* ================================================================
+   SPRACHE + MAGOR
+   ================================================================ */
+let voices=[];
+function loadVoices(){
+  voices = (window.speechSynthesis ? speechSynthesis.getVoices() : []) || [];
+  const sel=$('inVoice'); if(!sel) return;
+  const de = voices.filter(v=>/^de/i.test(v.lang));
+  const use = de.length?de:voices;
+  sel.innerHTML='';
+  if(!use.length){ sel.appendChild(new Option('keine Stimme gefunden','')); return; }
+  use.forEach(v=>sel.appendChild(new Option(v.name+' ('+v.lang+')', v.name)));
+  const saved=recall('voice',''); if(saved && use.some(v=>v.name===saved)) sel.value=saved;
+}
+if(window.speechSynthesis){
+  loadVoices();
+  speechSynthesis.onvoiceschanged=loadVoices;
+}
+
+function estimateMs(text){
+  const rate=parseFloat($('inRate').value)||0.85;
+  return Math.max(700, Math.round(text.length*82/rate));
+}
+
+function magorPing(params){
+  const base=($('inHook').value||'').trim();
+  if(!base) return;
+  const url = base + (base.includes('?')?'&':'?') + new URLSearchParams(params).toString();
+  fetch(url,{mode:'no-cors',cache:'no-store'}).catch(()=>{});
+}
+
+function speak(text){
+  if(!text) return;
+  const ms = estimateMs(text);
+  magorPing({ mood:$('inMood').value, lvl:$('inLvl').value, ms, stage:G?G.stage:1 });
+
+  if(!window.speechSynthesis){ toast('Dieses Gerät kann nicht sprechen.'); return; }
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  const vn=$('inVoice').value;
+  const v=voices.find(x=>x.name===vn);
+  if(v){ u.voice=v; u.lang=v.lang; } else { u.lang='de-DE'; }
+  u.rate  = parseFloat($('inRate').value)  || 0.85;
+  u.pitch = parseFloat($('inPitch').value) || 0.6;
+  u.onstart = ()=>{ if(G){ G.speaking=true; pushAll(); } };
+  u.onend   = ()=>{ if(G){ G.speaking=false; pushAll(); } magorPing({stop:1}); };
+  u.onerror = ()=>{ if(G){ G.speaking=false; pushAll(); } };
+  speechSynthesis.speak(u);
+}
+
+/* Aus dem Hinweis wird eine Schwärzung: Wortrhythmus bleibt, Inhalt nicht. */
+function maskOf(text){
+  return text.trim().split(/\s+/).filter(Boolean)
+             .map(w=>'█'.repeat(Math.min(12,Math.max(1,w.replace(/[.,;:!?…"»«]/g,'').length))));
+}
+
+/* ================================================================
+   NETZ
+   ================================================================ */
+const roomId = code => 'nostalgia-v1-'+code;
+
+function hostRoom(code,name){
+  ME={role:'master',name,code};
+  G=freshGame(code);
+  setStatus('loginStatus','Raum wird geöffnet…');
+  peer=new Peer(roomId(code),{debug:1});
+
+  peer.on('open',()=>{
+    $('topCode').textContent='Raum '+code;
+    $('topRole').textContent='Spielleiter';
+    $('topRole').className='badge master';
+    $('lobbyCode').textContent=code;
+    buildLobbyCards();
+    renderLobby();
+    show('scrLobby');
+    keepAwake();
+  });
+
+  peer.on('connection',conn=>{
+    conn.on('open',()=>{ conns[conn.peer]=conn; });
+    conn.on('data',d=>onHostData(conn,d));
+    conn.on('close',()=>{
+      delete conns[conn.peer];
+      if(G.players[conn.peer]){ G.players[conn.peer].online=false; renderMasterAll(); pushAll(); }
+    });
+    conn.on('error',()=>{});
+  });
+
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id')
+      setStatus('loginStatus','Dieser Code ist gerade belegt. Nimm einen anderen.','err');
+    else
+      setStatus('loginStatus','Verbindungsfehler: '+e.type,'err');
+  });
+}
+
+function joinRoom(code,name){
+  ME={role:'player',name,code};
+  setStatus('loginStatus','Suche den Raum…');
+  peer=new Peer({debug:1});
+
+  peer.on('open',()=>{
+    hostConn=peer.connect(roomId(code),{reliable:true});
+
+    const giveUp=setTimeout(()=>{
+      if(!hostConn||!hostConn.open)
+        setStatus('loginStatus','Kein Raum mit diesem Code. Tippfehler?','err');
+    },9000);
+
+    hostConn.on('open',()=>{
+      clearTimeout(giveUp);
+      hostConn.send({t:'join',name});
+      $('topCode').textContent='Raum '+code;
+      $('topRole').textContent='Spieler';
+      $('topRole').className='badge player';
+      show('scrWait');
+      keepAwake();
+    });
+    hostConn.on('data',d=>onPlayerData(d));
+    hostConn.on('close',()=>{
+      setStatus('playStatus','Verbindung zum Spielleiter verloren.','err');
+      toast('Verbindung verloren.');
+    });
+    hostConn.on('error',()=>setStatus('loginStatus','Verbindung fehlgeschlagen.','err'));
+  });
+
+  peer.on('error',e=>setStatus('loginStatus','Verbindungsfehler: '+e.type,'err'));
+}
+
+function send(pid,msg){ const c=conns[pid]; if(c&&c.open) c.send(msg); }
+function pushAll(){
+  if(!G) return;
+  for(const pid in conns) send(pid,{t:'state',s:viewFor(pid)});
+  renderMasterAll();
+}
+
+/* ---------- Spielleiter empfängt ---------- */
+function onHostData(conn,d){
+  const pid=conn.peer;
+  if(d.t==='join'){
+    if(!G.players[pid])
+      G.players[pid]={name:(d.name||'Spieler').slice(0,14),score:0,pick:null,
+                      logged:false,done:false,solvedStage:null,wrong:[],online:true};
+    else G.players[pid].online=true;
+    send(pid,{t:'state',s:viewFor(pid)});
+    renderMasterAll();
+    if(G.phase==='lobby') pushAll();
+  }
+  else if(d.t==='pick'){
+    const p=G.players[pid];
+    if(!p||p.done||p.logged||G.phase!=='round') return;
+    if(!SETS[G.setNo].includes(d.card)) return;
+    p.pick=d.card;
+    send(pid,{t:'state',s:viewFor(pid)});
+  }
+  else if(d.t==='log'){
+    const p=G.players[pid];
+    if(!p||p.done||G.phase!=='round'||!p.pick) return;
+    p.logged=true;
+    pushAll();
+  }
+  else if(d.t==='replay'){
+    const p=G.players[pid];
+    if(!G.lastClue) return;
+    toast((p?p.name:'Jemand')+' will den Hinweis nochmal.');
+    speak(G.lastClue);
+  }
+}
+
+/* ---------- Sicht eines einzelnen Spielers ---------- */
+function viewFor(pid){
+  const p=G.players[pid]||{};
+  return {
+    phase:G.phase, round:G.round, stage:G.stage,
+    cards:G.setNo?SETS[G.setNo]:[],
+    mask:G.lastMask, speaking:G.speaking, hasClue:!!G.lastClue,
+    me:{ pick:p.pick||null, logged:!!p.logged, done:!!p.done,
+         solvedStage:p.solvedStage||null, wrong:p.wrong||[], score:p.score||0 },
+    logged:Object.values(G.players).filter(x=>x.logged||x.done).length,
+    total:Object.values(G.players).length,
+    lobby:Object.values(G.players).map(x=>({name:x.name,online:x.online})),
+    scores:scoreTable(),
+    target:(G.phase==='reveal'||G.phase==='over')?G.target:null
+  };
+}
+function scoreTable(){
+  return Object.values(G.players)
+    .map(p=>({name:p.name,score:p.score,done:p.done}))
+    .sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+}
+
+/* ---------- Spieler empfängt ---------- */
+let V=null;
+function onPlayerData(d){
+  if(d.t!=='state') return;
+  V=d.s;
+  if(V.phase==='lobby')      { renderWait(); show('scrWait'); }
+  else if(V.phase==='round') { renderPlay(); show('scrPlay'); }
+  else if(V.phase==='reveal'){ renderReveal(V); show('scrReveal'); }
+  else if(V.phase==='over')  { renderList('overScores',V.scores,true); show('scrOver'); }
+}
+
+/* ================================================================
+   ANZEIGE
+   ================================================================ */
+function cardNode(id,{sel,target,out,locked}={}){
+  const b=el('button','card'+(sel?' sel':'')+(target?' target':'')+(out?' out':'')+(locked?' locked':''));
+  b.type='button';
+  const img=new Image(); img.src=id+'.jpg'; img.alt=id; img.loading='eager';
+  img.onerror=()=>{ img.replaceWith(el('div','tag','Bild fehlt: '+id+'.jpg')); };
+  b.appendChild(img);
+  b.appendChild(el('div','tag',id.replace('card_','').replace('_','·')));
+  b.dataset.card=id;
+  return b;
+}
+function renderList(nodeId,rows,withScore){
+  const box=$(nodeId); box.innerHTML='';
+  if(!rows.length){ const e=el('div','item'); e.appendChild(el('span','meta','noch niemand')); box.appendChild(e); return; }
+  rows.forEach(r=>{
+    const it=el('div','item');
+    const left=el('div'); left.style.display='flex'; left.style.alignItems='center';
+    const d=el('span','dot'+(r.done?' on':r.online===false?'':' wait'));
+    left.appendChild(d); left.appendChild(el('span','nm',r.name));
+    it.appendChild(left);
+    it.appendChild(withScore?el('span','pts',String(r.score)):el('span','meta',r.meta||''));
+    box.appendChild(it);
+  });
+}
+
+/* ---------- Spielleiter ---------- */
+let pendingSet=null, pendingTarget=null;
+function buildLobbyCards(){
+  const box=$('lobbyCards'); box.innerHTML='';
+  if(!pendingSet){ box.appendChild(el('p','empty','Zuerst eine Serie wählen.')); return; }
+  SETS[pendingSet].forEach(id=>{
+    const n=cardNode(id,{target:pendingTarget===id});
+    n.onclick=()=>{ pendingTarget=id; buildLobbyCards(); $('btnStart').disabled=false; };
+    box.appendChild(n);
+  });
+}
+function renderLobby(){
+  renderList('lobbyList',Object.values(G.players).map(p=>({name:p.name,online:p.online,meta:p.online?'bereit':'weg'})));
+}
+function renderMasterAll(){
+  if(!G) return;
+  if(G.phase==='lobby'){ renderLobby(); return; }
+  $('mRound').textContent=G.round; $('mStage').textContent=Math.max(1,G.stage);
+  const box=$('masterCards'); box.innerHTML='';
+  SETS[G.setNo].forEach(id=>box.appendChild(cardNode(id,{target:G.target===id,locked:true})));
+  renderList('masterList',Object.values(G.players).map(p=>({
+    name:p.name, online:p.online, done:p.done||p.logged,
+    meta:p.done?('richtig · Stufe '+p.solvedStage):(p.logged?'abgegeben':'überlegt noch')
+  })));
+}
+
+/* ---------- Spieler ---------- */
+function renderWait(){
+  renderList('waitList',(V.lobby||[]).map(p=>({name:p.name,online:p.online,meta:''})));
+}
+function renderPlay(){
+  $('pRound').textContent=V.round; $('pStage').textContent=Math.max(1,V.stage);
+
+  const r=$('redact'); r.innerHTML='';
+  if(!V.hasClue){ r.appendChild(el('span','empty','Noch nichts. Warte auf seine Stimme.')); }
+  else V.mask.forEach(w=>{ r.appendChild(el('span',null,w)); r.appendChild(document.createTextNode(' ')); });
+  $('trans').classList.toggle('live',!!V.speaking);
+  $('btnReplay').disabled=!V.hasClue;
+
+  const box=$('playCards'); box.innerHTML='';
+  const locked=V.me.done||V.me.logged;
+  V.cards.forEach(id=>{
+    const out=V.me.wrong.includes(id);
+    const n=cardNode(id,{sel:V.me.pick===id,out,locked:locked||out});
+    if(!locked&&!out) n.onclick=()=>{ hostConn.send({t:'pick',card:id}); };
+    box.appendChild(n);
+  });
+
+  if(V.me.done){
+    $('pickLabel').textContent='Du hattest recht';
+    $('btnLog').disabled=true; $('btnLog').textContent='Abgegeben';
+    setStatus('playStatus','Richtig auf Stufe '+V.me.solvedStage+'. Warte auf die anderen.','ok');
+  } else {
+    $('pickLabel').textContent=V.me.logged?'Abgegeben — warte auf die Auswertung':'Welche Karte meint er?';
+    $('btnLog').disabled=V.me.logged||!V.me.pick;
+    $('btnLog').textContent=V.me.logged?'Abgegeben':'Karte abgeben';
+    setStatus('playStatus',V.logged+' von '+V.total+' haben abgegeben.',null);
+  }
+  renderList('playScores',V.scores,true);
+}
+function renderReveal(v){
+  $('rRound').textContent=v.round;
+  const box=$('revealCards'); box.innerHTML='';
+  if(v.target) box.appendChild(cardNode(v.target,{target:true,locked:true}));
+  renderList('revealScores',v.scores,true);
+  $('revealMasterBtns').style.display = ME.role==='master' ? 'block':'none';
+  $('revealHead').textContent = ME.role==='master'
+    ? 'Aufgelöst. Weiter mit einer neuen Serie?'
+    : 'Das war die gesuchte Karte.';
+}
+
+/* ================================================================
+   ABLAUF
+   ================================================================ */
+function startRound(){
+  G.setNo=pendingSet; G.target=pendingTarget;
+  G.phase='round'; G.stage=1; G.lastClue=''; G.lastMask=[];
+  for(const pid in G.players){
+    const p=G.players[pid];
+    p.pick=null; p.logged=false; p.done=false; p.solvedStage=null; p.wrong=[];
+  }
+  $('btnRepeat').disabled=true;
+  show('scrMaster'); renderMasterAll(); pushAll();
+}
+
+function evaluate(){
+  const act=Object.values(G.players).filter(p=>!p.done);
+  if(!act.length){ setStatus('masterStatus','Alle sind schon durch.',null); return; }
+  const pts=Math.max(1,6-G.stage);
+  let right=0, judged=0;
+  act.forEach(p=>{
+    if(!p.logged) return;
+    judged++;
+    if(p.pick===G.target){ p.done=true; p.score+=pts; p.solvedStage=G.stage; right++; }
+    else { if(!p.wrong.includes(p.pick)) p.wrong.push(p.pick); p.logged=false; p.pick=null; }
+  });
+  if(!judged){ setStatus('masterStatus','Noch hat niemand abgegeben.',null); return; }
+
+  const left=Object.values(G.players).filter(p=>!p.done).length;
+  if(!left){ endRound('Alle haben die Karte gefunden.'); return; }
+
+  G.stage++; G.lastClue=''; G.lastMask=[];
+  $('btnRepeat').disabled=true;
+  setStatus('masterStatus',right+' richtig ('+pts+' Punkte). Stufe '+G.stage+', gib den nächsten Hinweis.','ok');
+  renderMasterAll(); pushAll();
+}
+
+function endRound(why){
+  G.phase='reveal';
+  renderReveal(viewFor('__master__'));
+  show('scrReveal');
+  setStatus('revealStatus',why||'',null);
+  pushAll();
+}
+
+function nextRound(){
+  G.round++; G.phase='lobby'; G.stage=0;
+  G.setNo=null; G.target=null; G.lastClue=''; G.lastMask=[];
+  pendingSet=null; pendingTarget=null;
+  $('btnStart').disabled=true;
+  buildLobbyCards(); renderLobby(); show('scrLobby'); pushAll();
+}
+
+function endGame(){
+  G.phase='over';
+  renderList('overScores',scoreTable(),true);
+  show('scrOver'); pushAll();
+}
+
+/* ================================================================
+   BEDIENUNG
+   ================================================================ */
+$('inCode').value=recall('code','');
+$('inName').value=recall('name','');
+$('inHook').value=recall('hook','');
+$('inRate').value=recall('rate','0.85');
+$('inPitch').value=recall('pitch','0.6');
+
+function readLogin(){
+  const code=$('inCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const name=$('inName').value.trim();
+  if(code.length<3){ setStatus('loginStatus','Der Raumcode braucht mindestens 3 Zeichen.','err'); return null; }
+  if(!name){ setStatus('loginStatus','Ohne Namen geht es nicht — die Punkte brauchen einen Besitzer.','err'); return null; }
+  store('code',code); store('name',name);
+  return {code,name};
+}
+$('btnHost').onclick=()=>{ const v=readLogin(); if(v) hostRoom(v.code,v.name); };
+$('btnJoin').onclick=()=>{ const v=readLogin(); if(v) joinRoom(v.code,v.name); };
+
+document.querySelectorAll('[data-set]').forEach(b=>{
+  b.onclick=()=>{ pendingSet=+b.dataset.set; pendingTarget=null;
+                  $('btnStart').disabled=true; buildLobbyCards(); };
+});
+$('btnStart').onclick=()=>{ if(pendingSet&&pendingTarget) startRound(); };
+
+$('btnSpeak').onclick=()=>{
+  const txt=$('inClue').value.trim();
+  if(!txt){ setStatus('masterStatus','Erst einen Satz eintippen.','err'); return; }
+  G.lastClue=txt; G.lastMask=maskOf(txt);
+  $('btnRepeat').disabled=false;
+  setStatus('masterStatus','Gesprochen. Die anderen sehen nur den Rhythmus.',null);
+  speak(txt); pushAll();
+};
+$('btnRepeat').onclick=()=>{ if(G.lastClue) speak(G.lastClue); };
+$('btnEval').onclick=evaluate;
+$('btnEndRound').onclick=()=>endRound('Vom Spielleiter beendet.');
+$('btnNextRound').onclick=nextRound;
+$('btnEndGame').onclick=endGame;
+$('btnAgain').onclick=()=>location.reload();
+
+$('btnTestVoice').onclick=()=>{
+  store('voice',$('inVoice').value); store('rate',$('inRate').value); store('pitch',$('inPitch').value);
+  speak('Ich erinnere mich an einen dunklen Tag.');
+};
+$('inHook').onchange=()=>store('hook',$('inHook').value.trim());
+$('inVoice').onchange=()=>store('voice',$('inVoice').value);
+$('inRate').onchange =()=>store('rate',$('inRate').value);
+$('inPitch').onchange=()=>store('pitch',$('inPitch').value);
+
+$('btnLog').onclick=()=>{ if(hostConn&&hostConn.open) hostConn.send({t:'log'}); };
+$('btnReplay').onclick=()=>{ if(hostConn&&hostConn.open){ hostConn.send({t:'replay'}); toast('Magor wird gebeten zu wiederholen.'); } };
+
+/* Bildschirm wach halten, damit niemand mitten im Raten aussperrt wird */
+async function keepAwake(){
+  try{
+    if('wakeLock' in navigator){
+      let w=await navigator.wakeLock.request('screen');
+      document.addEventListener('visibilitychange',async()=>{
+        if(document.visibilityState==='visible'){ try{ w=await navigator.wakeLock.request('screen'); }catch(e){} }
+      });
+    }
+  }catch(e){}
+}
+
+/* Bilder im Voraus laden, damit auf dem Hotspot nichts ruckelt */
+window.addEventListener('load',()=>{
+  for(const s of [1,2,3]) SETS[s].forEach(id=>{ const i=new Image(); i.src=id+'.jpg'; });
+});
+</script>
+</body>
+</html>
