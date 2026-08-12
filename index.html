@@ -220,6 +220,7 @@ details .body{padding:0 12px 14px}
       <button class="slim" data-set="2">2</button>
       <button class="slim" data-set="3">3</button>
       <button class="slim" data-set="4">4</button>
+      <button class="slim" data-set="5">5</button>
     </div>
     <p class="sub" style="margin:10px 0 0">Dann die gesuchte Karte antippen.</p>
     <div class="cards" id="lobbyCards"></div>
@@ -375,7 +376,7 @@ details .body{padding:0 12px 14px}
    Zielkarte und fremde Abgaben verlassen dieses Gerät nie.
    ================================================================ */
 
-const SETNOS = [1,2,3,4];
+const SETNOS = [1,2,3,4,5];
 const SETS = {};
 SETNOS.forEach(s=>{ SETS[s]=[]; for(let i=1;i<=5;i++) SETS[s].push('card_'+s+'_'+i); });
 
